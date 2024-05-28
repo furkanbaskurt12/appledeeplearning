@@ -1,0 +1,53 @@
+import os
+import glob
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
+
+# Define the data generator
+datagen = ImageDataGenerator(preprocessing_function=tf.keras.applications.vgg16.preprocess_input)
+
+# Define the model
+base_model = VGG16(weights='imagenet', include_top=False)
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
+predictions = Dense(4, activation='softmax')(x)
+model = Model(inputs=base_model.input, outputs=predictions)
+
+# Compile the model
+model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Define the training data
+train_dir = '/content/drive/MyDrive/apple'
+train_generator = datagen.flow_from_directory(
+    train_dir,
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode='categorical')
+
+# Train the model
+model.fit_generator(
+    train_generator,
+    steps_per_epoch=len(train_generator),
+    epochs=5)
+
+# Save the model
+model.save('/content/drive/MyDrive/apple/model.h5')
+
+# Load the model
+model = tf.keras.models.load_model('/content/drive/MyDrive/apple/model.h5')
+
+# Predict the type of a new image
+import cv2
+import numpy as np
+image_path = '/content/drive/MyDrive/apple/braeburn/image.jpg'
+image = cv2.imread(image_path)
+image = cv2.resize(image, (224, 224))
+image = np.expand_dims(image, axis=0)
+image = tf.keras.applications.vgg16.preprocess_input(image)
+prediction = model.predict(image)
+predicted_class = np.argmax(prediction)
+print(predicted_class)
