@@ -1,0 +1,218 @@
+import numpy as np
+import os
+import glob
+from PIL import Image
+import tensorflow as tf
+
+# Mount Google Drive
+from google.colab import drive
+drive.mount('/content/drive')
+
+# Define the directory containing the images
+image_dir = '/content/drive/MyDrive/apple'
+
+# Define the list of classes
+classes = ['braeburn', 'golden', 'granny smith', 'red', 'apple red delicious', 'red yellow']
+
+# Load the pre-trained model
+model = tf.keras.applications.MobileNetV2()
+
+# Preprocess the images
+images = []
+for class_name in classes:
+    for image_path in glob.glob(os.path.join(image_dir, class_name, "*.jpg")):
+        image = Image.open(image_path)
+        image = image.resize((224, 224))
+        image = tf.keras.preprocessing.image.img_to_array(image)
+        image = tf.keras.applications.mobilenet_v2.preprocess_input(image)
+        images.append(image)
+
+# Make predictions
+predictions = model.predict(np.array(images))
+
+# Save the predictions
+with open('/content/drive/MyDrive/predictions.txt', 'w') as f:
+    for i, prediction in enumerate(predictions):
+        class_id = np.argmax(prediction)
+        class_name = classes[class_id]
+        f.write(f"{i+1}. {class_name}\n")
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.layers import Flatten, Dense
+from tensorflow.keras.models import Model
+
+# Define the data generator
+datagen = ImageDataGenerator()
+
+# Load the data from the specified folder
+train_generator = datagen.flow_from_directory(
+    '/content/drive/MyDrive/apple',
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode='categorical')
+
+# Define the model
+base_model = VGG16(weights='imagenet', include_top=False)
+x = base_model.output
+x = Flatten()(x)
+predictions = Dense(4, activation='softmax')(x)
+model = Model(inputs=base_model.input, outputs=predictions)
+
+# Compile the model
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model
+model.fit(train_generator, epochs=10)
+
+# Save the model
+model.save('/content/drive/MyDrive/apple_model.h5')
+
+# Load the model
+model = tf.keras.models.load_model('/content/drive/MyDrive/apple_model.h5')
+
+# Predict the type of a new image
+import cv2
+import numpy as np
+image = cv2.imread('/content/drive/MyDrive/apple/new_image.jpg')
+image = cv2.resize(image, (224, 224))
+image = np.expand_dims(image, axis=0)
+prediction = model.predict(image)
+predicted_class = np.argmax(prediction)
+
+# Print the predicted class
+if predicted_class == 0:
+  print('braeburn')
+elif predicted_class == 1:
+  print('golden')
+elif predicted_class == 2:
+  print('granny smith')
+elif predicted_class == 3:
+  print('red')
+else:
+  print('apple red delicious')
+import os
+import glob
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
+
+# Define the data generator
+datagen = ImageDataGenerator(preprocessing_function=tf.keras.applications.vgg16.preprocess_input)
+
+# Define the model
+base_model = VGG16(weights='imagenet', include_top=False)
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
+predictions = Dense(4, activation='softmax')(x)
+model = Model(inputs=base_model.input, outputs=predictions)
+
+# Compile the model
+model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Define the training data
+train_dir = '/content/drive/MyDrive/apple'
+train_generator = datagen.flow_from_directory(
+    train_dir,
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode='categorical')
+
+# Train the model
+model.fit_generator(
+    train_generator,
+    steps_per_epoch=len(train_generator),
+    epochs=5)
+
+# Save the model
+model.save('/content/drive/MyDrive/apple/model.h5')
+
+# Load the model
+model = tf.keras.models.load_model('/content/drive/MyDrive/apple/model.h5')
+
+# Predict the type of a new image
+import cv2
+import numpy as np
+image_path = '/content/drive/MyDrive/apple/braeburn/image.jpg'
+image = cv2.imread(image_path)
+image = cv2.resize(image, (224, 224))
+image = np.expand_dims(image, axis=0)
+image = tf.keras.applications.vgg16.preprocess_input(image)
+prediction = model.predict(image)
+predicted_class = np.argmax(prediction)
+print(predicted_class)
+import numpy as np
+import os
+import glob
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+# Define the directory where the images are stored
+image_dir = '/content/drive/MyDrive/apple'
+
+# Get a list of all the subdirectories in the image directory
+subdirectories = os.listdir(image_dir)
+
+# Create a dictionary to store the mapping between subdirectories and fruit types
+fruit_types = {
+    'braeburn': 'Apple Braeburn',
+    'golden': 'Apple Golden',
+    'granny smith': 'Apple Granny Smith',
+    'red': 'Apple Red',
+    'apple red delicious': 'Red Delicious',
+    'red yellow': 'Apple Red Yellow'
+}
+
+# Create a list of all the image paths
+image_paths = []
+for subdirectory in subdirectories:
+    image_paths.extend(glob.glob(os.path.join(image_dir, subdirectory, '*.jpg')))
+
+# Create an image data generator
+image_generator = ImageDataGenerator(rescale=1./255)
+
+# Load the images from the generator
+image_data = image_generator.flow_from_directory(
+    image_dir,
+    target_size=(224, 224),
+    batch_size=32
+)
+
+# Create a deep learning model
+model = keras.Sequential([
+    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(224, 224, 3)),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Flatten(),
+    layers.Dense(128, activation='relu'),
+    layers.Dense(len(fruit_types), activation='softmax')
+])
+
+# Compile the model
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model
+model.fit(image_data, epochs=5)
+
+# Save the model
+model.save('fruit_classifier.h5')
+
+# Load the model
+model = keras.models.load_model('fruit_classifier.h5')
+
+# Predict the fruit type of a new image
+new_image_path = '/content/drive/MyDrive/apple/braeburn/image.jpg'
+new_image = tf.keras.preprocessing.image.load_img(new_image_path, target_size=(224, 224))
+new_image_array = tf.keras.preprocessing.image.img_to_array(new_image)
+new_image_array = np.expand_dims(new_image_array, axis=0)
+predictions = model.predict(new_image_array)
+predicted_fruit_type = fruit_types[np.argmax(predictions)]
+
+# Print the predicted fruit type
+print(predicted_fruit_type)
